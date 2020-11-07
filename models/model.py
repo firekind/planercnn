@@ -342,7 +342,8 @@ def proposal_layer(inputs, proposal_count, nms_threshold, anchors, config=None):
     torch.save({
         'boxes': boxes.cpu(),
         'scores': scores.cpu(),
-        'result': keep.cpu()
+        'result': keep.cpu(),
+        'threshold': nms_threshold
     }, 'nms_check_thingy.data')
 
     keep = keep[:proposal_count]
