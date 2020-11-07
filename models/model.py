@@ -340,9 +340,9 @@ def proposal_layer(inputs, proposal_count, nms_threshold, anchors, config=None):
     ## Non-max suppression
     keep = nms(torch.cat((boxes, scores.unsqueeze(1)), 1).data, nms_threshold)
     torch.save({
-        'boxes': boxes,
-        'scores': scores,
-        'result': keep
+        'boxes': boxes.cpu(),
+        'scores': scores.cpu(),
+        'result': keep.cpu()
     }, 'nms_check_thingy.data')
 
     keep = keep[:proposal_count]
