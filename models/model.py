@@ -348,8 +348,6 @@ def proposal_layer(inputs, proposal_count, nms_threshold, anchors, config=None):
 
     keep = keep[:proposal_count]
     boxes = boxes[keep, :]
-
-    
     
     ## Normalize dimensions to range of 0 to 1.
     norm = Variable(torch.from_numpy(np.array([height, width, height, width])).float(), requires_grad=False)
