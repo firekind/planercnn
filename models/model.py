@@ -20,8 +20,8 @@ import torch.utils.data
 from torch.autograd import Variable
 
 import utils
-from nms.nms_wrapper import nms
-from roialign.roi_align.crop_and_resize import CropAndResizeFunction
+from torchvision.ops import nms
+from roi_align import CropAndResizeFunction
 import cv2
 from models.modules import *
 from utils import *
@@ -338,7 +338,7 @@ def proposal_layer(inputs, proposal_count, nms_threshold, anchors, config=None):
     ## for small objects, so we're skipping it.
 
     ## Non-max suppression
-    keep = nms(torch.cat((boxes, scores.unsqueeze(1)), 1).data, nms_threshold)
+    keep = nms(boxes, scores, nms_threshold)
     torch.save({
         'boxes': boxes.cpu(),
         'scores': scores.cpu(),
@@ -440,7 +440,7 @@ def pyramid_roi_align(inputs, pool_size, image_shape):
         if level_boxes.is_cuda:
             ind = ind.cuda()
         feature_maps[i] = feature_maps[i].unsqueeze(0)  #CropAndResizeFunction needs batch dimension
-        pooled_features = CropAndResizeFunction(pool_size, pool_size, 0)(feature_maps[i], level_boxes, ind)
+        pooled_features = CropAndResizeFunction.apply(feature_maps[i], level_boxes, ind, pool_size, pool_size, 0)
         torch.save({
             'height': pool_size,
             'width': pool_size,
@@ -508,7 +508,7 @@ def coordinates_roi(inputs, pool_size, image_shape):
     if boxes.is_cuda:
         ind = ind.cuda()
     cooridnates = cooridnates.unsqueeze(0)  ## CropAndResizeFunction needs batch dimension
-    pooled_features = CropAndResizeFunction(pool_size, pool_size, 0)(cooridnates, boxes, ind)
+    pooled_features = CropAndResizeFunction.apply(cooridnates, boxes, ind, pool_size, pool_size, 0)
     torch.save({
         'height': pool_size,
         'width': pool_size,
@@ -660,7 +660,7 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
             box_ids = box_ids.cuda()
 
         if config.NUM_PARAMETER_CHANNELS > 0:
-            masks = Variable(CropAndResizeFunction(config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0)(roi_masks[:, :, :, 0].contiguous().unsqueeze(1), boxes, box_ids).data, requires_grad=False).squeeze(1)
+            masks = Variable(CropAndResizeFunction.apply(roi_masks[:, :, :, 0].contiguous().unsqueeze(1), boxes, box_ids, config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0).data, requires_grad=False).squeeze(1)
             torch.save({
                 'height': config.MASK_SHAPE[0],
                 'width': config.MASK_SHAPE[1],
@@ -671,7 +671,7 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
                 'res': masks.cpu()
             }, 'roi_check/detection_target_layer_if_masks.data')
             masks = torch.round(masks)
-            parameters = Variable(CropAndResizeFunction(config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0)(roi_masks[:, :, :, 1].contiguous().unsqueeze(1), boxes, box_ids).data, requires_grad=False).squeeze(1)
+            parameters = Variable(CropAndResizeFunction.apply(roi_masks[:, :, :, 1].contiguous().unsqueeze(1), boxes, box_ids, config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0).data, requires_grad=False).squeeze(1)
             torch.save({
                 'height': config.MASK_SHAPE[0],
                 'width': config.MASK_SHAPE[1],
@@ -683,7 +683,7 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
             }, 'roi_check/detection_target_layer_if_parameters.data')
             masks = torch.stack([masks, parameters], dim=-1)
         else:
-            masks = Variable(CropAndResizeFunction(config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0)(roi_masks.unsqueeze(1), boxes, box_ids).data, requires_grad=False).squeeze(1)
+            masks = Variable(CropAndResizeFunction.apply(roi_masks.unsqueeze(1), boxes, box_ids, config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0).data, requires_grad=False).squeeze(1)
             torch.save({
                 'height': config.MASK_SHAPE[0],
                 'width': config.MASK_SHAPE[1],
@@ -890,7 +890,7 @@ def refine_detections(rois, probs, deltas, parameters, window, config, return_in
         ix_scores, order = ix_scores.sort(descending=True)
         ix_rois = ix_rois[order.data,:]
         
-        nms_keep = nms(torch.cat((ix_rois, ix_scores.unsqueeze(1)), dim=1).data, config.DETECTION_NMS_THRESHOLD)
+        nms_keep = nms(ix_rois, ix_scores, config.DETECTION_NMS_THRESHOLD)
         torch.save({
             'boxes': ix_rois.cpu(),
             'scores': ix_scores.cpu(),
@@ -915,7 +915,7 @@ def refine_detections(rois, probs, deltas, parameters, window, config, return_in
             ix_scores, order = ix_scores.sort(descending=True)
             ix_rois = ix_rois[order.data,:]
 
-            class_keep = nms(torch.cat((ix_rois, ix_scores.unsqueeze(1)), dim=1).data, config.DETECTION_NMS_THRESHOLD)
+            class_keep = nms(ix_rois, ix_scores, config.DETECTION_NMS_THRESHOLD)
             torch.save({
                 'boxes': ix_rois.cpu(),
                 'scores': ix_scores.cpu(),
@@ -1981,7 +1981,7 @@ class MaskRCNN(nn.Module):
                     box_ids = Variable(torch.arange(roi_gt_masks.size()[0]), requires_grad=False).int()
                     if self.config.GPU_COUNT:
                         box_ids = box_ids.cuda()
-                    roi_gt_masks = Variable(CropAndResizeFunction(self.config.FINAL_MASK_SHAPE[0], self.config.FINAL_MASK_SHAPE[1], 0)(roi_gt_masks.unsqueeze(1), boxes, box_ids).data, requires_grad=False)
+                    roi_gt_masks = Variable(CropAndResizeFunction.apply(roi_gt_masks.unsqueeze(1), boxes, box_ids, self.config.FINAL_MASK_SHAPE[0], self.config.FINAL_MASK_SHAPE[1], 0).data, requires_grad=False)
                     torch.save({
                         'height': self.config.FINAL_MASK_SHAPE[0],
                         'width': self.config.FINAL_MASK_SHAPE[1],
