@@ -35,7 +35,7 @@ Please use Python 3. Create an [Anaconda](https://www.anaconda.com/distribution/
 ```
 conda create --name planercnn
 conda activate planercnn
-conda install -y pytorch=0.4.1
+conda install -y pytorch torchvision -c pytorch
 conda install pip
 pip install -r requirements.txt
 ```
@@ -46,33 +46,6 @@ python -m virtualenv planercnn
 source planercnn/bin/activate
 pip install -r requirements.txt
 ```
-Now, we compile nms and roialign as explained in the installation section of [pytorch-mask-rcnn](https://github.com/multimodallearning/pytorch-mask-rcnn). To be specific, you can build these two functions using the following commands with the right `--arch` option:
-
- | GPU                     | arch  |
- |-------------------------|-------|
- | TitanX                  | sm_52 |
- | GTX 960M                | sm_50 |
- | GTX 1070                | sm_61 |
- | GTX 1080 (Ti), Titan XP | sm_61 |
-
-More details of the compute capability are shown in [NVIDIA](https://developer.nvidia.com/cuda-gpus)
-
-```bash
-cd nms/src/cuda/
-nvcc -c -o nms_kernel.cu.o nms_kernel.cu -x cu -Xcompiler -fPIC -arch=[arch]
-cd ../../
-python build.py
-cd ../
-
-
-cd roialign/roi_align/src/cuda/
-nvcc -c -o crop_and_resize_kernel.cu.o crop_and_resize_kernel.cu -x cu -Xcompiler -fPIC -arch=[arch]
-cd ../../
-python build.py
-cd ../../
-
-```
-Please note that, the Mask R-CNN backbone does not support cuda10.0 and gcc versions higher than 7. If you have troubles compiling these two libraries, try to downgrade PyTorch to 0.4.0 before compilation and upgrade back to 0.4.1 after compilation. You might also want to find more information on their original [repository](https://github.com/multimodallearning/pytorch-mask-rcnn).
 
 ## Models
 Models are saved under *checkpoint/*. You can download our trained model from [here](https://www.dropbox.com/s/yjcg6s57n581sk0/checkpoint.zip?dl=0), and put it under *checkpoint/* if you want to fine-tune it or run inferences.

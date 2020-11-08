@@ -339,12 +339,6 @@ def proposal_layer(inputs, proposal_count, nms_threshold, anchors, config=None):
 
     ## Non-max suppression
     keep = nms(boxes, scores, nms_threshold)
-    torch.save({
-        'boxes': boxes.cpu(),
-        'scores': scores.cpu(),
-        'result': keep.cpu(),
-        'threshold': nms_threshold
-    }, 'nms_check/proposal_layer.data')
 
     keep = keep[:proposal_count]
     boxes = boxes[keep, :]
@@ -441,15 +435,6 @@ def pyramid_roi_align(inputs, pool_size, image_shape):
             ind = ind.cuda()
         feature_maps[i] = feature_maps[i].unsqueeze(0)  #CropAndResizeFunction needs batch dimension
         pooled_features = CropAndResizeFunction.apply(feature_maps[i], level_boxes, ind, pool_size, pool_size, 0)
-        torch.save({
-            'height': pool_size,
-            'width': pool_size,
-            'extrapolation': 0,
-            'image': feature_maps[i].cpu(),
-            'boxes': level_boxes.cpu(),
-            'ind': ind,
-            'res': pooled_features.cpu()
-        }, 'roi_check/pyramid_roi_align_%d.data' % i)
         pooled.append(pooled_features)
 
     ## Pack pooled features into one tensor
@@ -509,15 +494,6 @@ def coordinates_roi(inputs, pool_size, image_shape):
         ind = ind.cuda()
     cooridnates = cooridnates.unsqueeze(0)  ## CropAndResizeFunction needs batch dimension
     pooled_features = CropAndResizeFunction.apply(cooridnates, boxes, ind, pool_size, pool_size, 0)
-    torch.save({
-        'height': pool_size,
-        'width': pool_size,
-        'extrapolation': 0,
-        'image': cooridnates.cpu(),
-        'boxes': boxes.cpu(),
-        'ind': ind,
-        'res': pooled_features.cpu()
-    }, 'roi_check/coordinates_roi.data')
 
     return pooled_features
 
@@ -596,17 +572,13 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
     if config.GPU_COUNT:
         no_crowd_bool = no_crowd_bool.cuda()
 
-    print("proposals: ", proposals.dtype, proposals.shape)
     ## Compute overlaps matrix [proposals, gt_boxes]
     overlaps = bbox_overlaps(proposals, gt_boxes)
-    print("overlaps: ", overlaps.dtype, overlaps.shape)
     ## Determine postive and negative ROIs
     roi_iou_max = torch.max(overlaps, dim=1)[0]
-    print("roi_iou_max: ", roi_iou_max.dtype, roi_iou_max.shape)
 
     ## 1. Positive ROIs are those with >= 0.5 IoU with a GT box
     positive_roi_bool = (roi_iou_max >= 0.5).byte()
-    print("positive_roi_bool: ", positive_roi_bool.dtype, positive_roi_bool.shape)
     #print('positive count', positive_roi_bool.sum())
 
     ## Subsample ROIs. Aim for 33% positive
@@ -661,38 +633,11 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
 
         if config.NUM_PARAMETER_CHANNELS > 0:
             masks = Variable(CropAndResizeFunction.apply(roi_masks[:, :, :, 0].contiguous().unsqueeze(1), boxes, box_ids, config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0).data, requires_grad=False).squeeze(1)
-            torch.save({
-                'height': config.MASK_SHAPE[0],
-                'width': config.MASK_SHAPE[1],
-                'extrapolation': 0,
-                'image': roi_masks[:, :, :, 0].contiguous().unsqueeze(1).cpu(),
-                'boxes': boxes.cpu(),
-                'ind': box_ids.cpu(),
-                'res': masks.cpu()
-            }, 'roi_check/detection_target_layer_if_masks.data')
             masks = torch.round(masks)
             parameters = Variable(CropAndResizeFunction.apply(roi_masks[:, :, :, 1].contiguous().unsqueeze(1), boxes, box_ids, config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0).data, requires_grad=False).squeeze(1)
-            torch.save({
-                'height': config.MASK_SHAPE[0],
-                'width': config.MASK_SHAPE[1],
-                'extrapolation': 0,
-                'image': roi_masks[:, :, :, 1].contiguous().unsqueeze(1).cpu(),
-                'boxes': boxes.cpu(),
-                'ind': box_ids.cpu(),
-                'res': parameters.cpu()
-            }, 'roi_check/detection_target_layer_if_parameters.data')
             masks = torch.stack([masks, parameters], dim=-1)
         else:
             masks = Variable(CropAndResizeFunction.apply(roi_masks.unsqueeze(1), boxes, box_ids, config.MASK_SHAPE[0], config.MASK_SHAPE[1], 0).data, requires_grad=False).squeeze(1)
-            torch.save({
-                'height': config.MASK_SHAPE[0],
-                'width': config.MASK_SHAPE[1],
-                'extrapolation': 0,
-                'image': roi_masks.unsqueeze(1).cpu(),
-                'boxes': boxes.cpu(),
-                'ind': box_ids.cpu(),
-                'res': masks.cpu()
-            }, 'roi_check/detection_target_layer_else_masks.data')
             masks = torch.round(masks)            
             pass
 
@@ -703,8 +648,6 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
 
     ## 2. Negative ROIs are those with < 0.5 with every GT box. Skip crowds.
     negative_roi_bool = (roi_iou_max < 0.5).byte()
-    print("roi_iou_max: ", roi_iou_max.dtype, roi_iou_max.shape)
-    print("no_crowd_bool: ", no_crowd_bool.dtype, no_crowd_bool.shape)
     negative_roi_bool = negative_roi_bool & no_crowd_bool
     ## Negative ROIs. Add enough to maintain positive:negative ratio.
     if (negative_roi_bool > 0).sum() > 0 and positive_count>0:
@@ -891,12 +834,6 @@ def refine_detections(rois, probs, deltas, parameters, window, config, return_in
         ix_rois = ix_rois[order.data,:]
         
         nms_keep = nms(ix_rois, ix_scores, config.DETECTION_NMS_THRESHOLD)
-        torch.save({
-            'boxes': ix_rois.cpu(),
-            'scores': ix_scores.cpu(),
-            'result': nms_keep.cpu(),
-            'threshold': config.DETECTION_NMS_THRESHOLD
-        }, 'nms_check/refine_detections_if_use_nms_is_2.data')
         nms_keep = keep[ixs[order[nms_keep].data].data]
         keep = intersect1d(keep, nms_keep)        
     elif use_nms == 1:
@@ -916,13 +853,6 @@ def refine_detections(rois, probs, deltas, parameters, window, config, return_in
             ix_rois = ix_rois[order.data,:]
 
             class_keep = nms(ix_rois, ix_scores, config.DETECTION_NMS_THRESHOLD)
-            torch.save({
-                'boxes': ix_rois.cpu(),
-                'scores': ix_scores.cpu(),
-                'result': class_keep.cpu(),
-                'threshold': config.DETECTION_NMS_THRESHOLD
-            }, 'nms_check/refine_detections_elif_use_nms_is_1.data')
-
             ## Map indicies
             class_keep = keep[ixs[order[class_keep].data].data]
 
@@ -1770,7 +1700,6 @@ class MaskRCNN(nn.Module):
                                  nms_threshold=self.config.RPN_NMS_THRESHOLD,
                                  anchors=self.anchors,
                                  config=self.config)
-        print("rpn_rois: ", rpn_rois.dtype, rpn_rois.shape)
         
         if mode == 'inference':
             ## Network Heads
@@ -1982,15 +1911,6 @@ class MaskRCNN(nn.Module):
                     if self.config.GPU_COUNT:
                         box_ids = box_ids.cuda()
                     roi_gt_masks = Variable(CropAndResizeFunction.apply(roi_gt_masks.unsqueeze(1), boxes, box_ids, self.config.FINAL_MASK_SHAPE[0], self.config.FINAL_MASK_SHAPE[1], 0).data, requires_grad=False)
-                    torch.save({
-                        'height': self.config.FINAL_MASK_SHAPE[0],
-                        'width': self.config.FINAL_MASK_SHAPE[1],
-                        'extrapolation': 0,
-                        'image': roi_gt_masks.unsqueeze(1).cpu(),
-                        'boxes': boxes.cpu(),
-                        'ind': box_ids.cpu(),
-                        'res': roi_gt_masks.cpu()
-                    }, 'roi_check/predict.data')
                     roi_gt_masks = roi_gt_masks.squeeze(1)
 
                     roi_gt_masks = torch.round(roi_gt_masks)
