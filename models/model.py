@@ -596,14 +596,17 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
     if config.GPU_COUNT:
         no_crowd_bool = no_crowd_bool.cuda()
 
+    print("proposals: ", proposals.dtype, proposals.shape)
     ## Compute overlaps matrix [proposals, gt_boxes]
     overlaps = bbox_overlaps(proposals, gt_boxes)
-
+    print("overlaps: ", overlaps.dtype, overlaps.shape)
     ## Determine postive and negative ROIs
     roi_iou_max = torch.max(overlaps, dim=1)[0]
+    print("roi_iou_max: ", roi_iou_max.dtype, roi_iou_max.shape)
 
     ## 1. Positive ROIs are those with >= 0.5 IoU with a GT box
     positive_roi_bool = roi_iou_max >= 0.5
+    print("positive_roi_bool: ", positive_roi_bool.dtype, positive_roi_bool.shape)
     #print('positive count', positive_roi_bool.sum())
 
     ## Subsample ROIs. Aim for 33% positive
@@ -700,6 +703,8 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
 
     ## 2. Negative ROIs are those with < 0.5 with every GT box. Skip crowds.
     negative_roi_bool = roi_iou_max < 0.5
+    print("roi_iou_max: ", roi_iou_max.dtype, roi_iou_max.shape)
+    print("no_crowd_bool: ", no_crowd_bool.dtype, no_crowd_bool.shape)
     negative_roi_bool = negative_roi_bool & no_crowd_bool
     ## Negative ROIs. Add enough to maintain positive:negative ratio.
     if (negative_roi_bool > 0).sum() > 0 and positive_count>0:
@@ -1765,6 +1770,7 @@ class MaskRCNN(nn.Module):
                                  nms_threshold=self.config.RPN_NMS_THRESHOLD,
                                  anchors=self.anchors,
                                  config=self.config)
+        print("rpn_rois: ", rpn_rois.dtype, rpn_rois.shape)
         
         if mode == 'inference':
             ## Network Heads
