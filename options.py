@@ -6,7 +6,7 @@ Licensed under the CC BY-NC-SA 4.0 license
 
 import argparse
 
-def parse_args():
+def parse_args(in_notebook=False, args=None):
     """
     Parse input arguments
     """
@@ -184,5 +184,11 @@ def parse_args():
                         help='evaluation methods',
                         default='b', type=str)
     
-    args = parser.parse_args()
+    if args is not None:
+        args = parser.parse_args(args)
+    else:
+        if not in_notebook:
+            args = parser.parse_args()
+        else:
+            args = parser.parse_args('')
     return args
