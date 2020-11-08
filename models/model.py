@@ -605,7 +605,7 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
     print("roi_iou_max: ", roi_iou_max.dtype, roi_iou_max.shape)
 
     ## 1. Positive ROIs are those with >= 0.5 IoU with a GT box
-    positive_roi_bool = roi_iou_max >= 0.5
+    positive_roi_bool = (roi_iou_max >= 0.5).byte()
     print("positive_roi_bool: ", positive_roi_bool.dtype, positive_roi_bool.shape)
     #print('positive count', positive_roi_bool.sum())
 
@@ -702,7 +702,7 @@ def detection_target_layer(proposals, gt_class_ids, gt_boxes, gt_masks, gt_param
         positive_count = 0
 
     ## 2. Negative ROIs are those with < 0.5 with every GT box. Skip crowds.
-    negative_roi_bool = roi_iou_max < 0.5
+    negative_roi_bool = (roi_iou_max < 0.5).byte()
     print("roi_iou_max: ", roi_iou_max.dtype, roi_iou_max.shape)
     print("no_crowd_bool: ", no_crowd_bool.dtype, no_crowd_bool.shape)
     negative_roi_bool = negative_roi_bool & no_crowd_bool
