@@ -374,9 +374,3 @@ class InferenceConfig(PlaneConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
     DETECTION_MIN_CONFIDENCE = 0
-
-
-class EVA5Config(Config):
-    EXTERNAL_EXTRACTOR=True
-    NUM_CLASSES=4
-    GPU_COUNT=1

@@ -1412,9 +1412,10 @@ class MaskRCNN(nn.Module):
         super(MaskRCNN, self).__init__()
         self.config = config
         self.model_dir = model_dir
-        self.set_log_dir()
         self.build(config=config)
-        self.initialize_weights()
+        if not hasattr(config, 'INIT_LOG_DIR_AND_WEIGHTS') or config.INIT_LOG_DIR_AND_WEIGHTS:
+            self.set_log_dir()
+            self.initialize_weights()
         self.loss_history = []
         self.val_loss_history = []
 
