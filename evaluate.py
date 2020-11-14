@@ -588,11 +588,24 @@ def evaluate(options):
             else:
                 for c in range(len(detection_pair)):
                     np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_parameters_' + str(c) + '.npy', detection_pair[c]['detection'][:, 6:9].cpu())
-                    np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy', detection_pair[c]['masks'][:, 80:560].cpu())
+
+                    if options.maskMode == "npy":
+                        np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy', detection_pair[c]['masks'][:, 80:560].cpu())
+                    elif options.maskMode == "png":
+                        cv2.imwrite(
+                            options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.png',
+                            masks_to_image(detection_pair[c]['masks'][:, 80:560].permute(1, 2, 0).cpu().numpy())
+                        )
+                    else:
+                        np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy', detection_pair[c]['masks'][:, 80:560].cpu())
+                        cv2.imwrite(
+                            options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.png',
+                            masks_to_image(detection_pair[c]['masks'][:, 80:560].permute(1, 2, 0).cpu().numpy())
+                        )
                     continue
                 pass
                             
-            if sampleIndex < 30 or options.debug or options.dataset != '':
+            if (sampleIndex < 30 or options.debug or options.dataset != '') and not options.noVisualize:
                 visualizeBatchPair(options, config, input_pair, detection_pair, indexOffset=sampleIndex % 500, suffix='_' + name + options.modelType, write_ply=options.testingIndex >= 0, write_new_view=options.testingIndex >= 0 and 'occlusion' in options.suffix)
                 pass
             if sampleIndex >= options.numTestingImages:
