@@ -587,19 +587,25 @@ def evaluate(options):
                     continue
             else:
                 for c in range(len(detection_pair)):
-                    np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_parameters_' + str(c) + '.npy', detection_pair[c]['detection'][:, 6:9].cpu())
+                    param_file_name = str(sampleIndex % 500) + '_plane_parameters_' + str(c) + '.npy'
+                    # mask_file_name_npy = str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy'
+                    # mask_file_name_png = str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.png'
+                    mask_file_name_npy = image_list[sampleIndex] + '_masks' + '.npy'
+                    mask_file_name_png = image_list[sampleIndex] + '_masks' + '.png'
+
+                    np.save(options.test_dir + '/' + param_file_name, detection_pair[c]['detection'][:, 6:9].cpu())
 
                     if options.maskMode == "npy":
-                        np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy', detection_pair[c]['masks'][:, 80:560].cpu())
+                        np.save(options.test_dir + '/' + mask_file_name_npy, detection_pair[c]['masks'][:, 80:560].cpu())
                     elif options.maskMode == "png":
                         cv2.imwrite(
-                            options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.png',
+                            options.test_dir + '/' + mask_file_name_png,
                             masks_to_image(detection_pair[c]['masks'][:, 80:560].permute(1, 2, 0).cpu().numpy())
                         )
                     else:
-                        np.save(options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy', detection_pair[c]['masks'][:, 80:560].cpu())
+                        np.save(options.test_dir + '/' + mask_file_name_npy, detection_pair[c]['masks'][:, 80:560].cpu())
                         cv2.imwrite(
-                            options.test_dir + '/' + str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.png',
+                            options.test_dir + '/' + mask_file_name_png,
                             masks_to_image(detection_pair[c]['masks'][:, 80:560].permute(1, 2, 0).cpu().numpy())
                         )
                     continue
