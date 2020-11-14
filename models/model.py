@@ -1651,7 +1651,7 @@ class MaskRCNN(nn.Module):
             self.apply(set_bn_eval)
 
         ## Feature extraction
-        [p2_out, p3_out, p4_out, p5_out, p6_out] = self.fpn(molded_images, extractor_stages=extractor_stages)
+        [p2_out, p3_out, p4_out, p5_out, p6_out] = self.fpn(molded_images)
         ## Note that P6 is used in RPN, but not in the classifier heads.
 
         rpn_feature_maps = [p2_out, p3_out, p4_out, p5_out, p6_out]
