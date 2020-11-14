@@ -590,8 +590,8 @@ def evaluate(options):
                     param_file_name = str(sampleIndex % 500) + '_plane_parameters_' + str(c) + '.npy'
                     # mask_file_name_npy = str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy'
                     # mask_file_name_png = str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.png'
-                    mask_file_name_npy = image_list[sampleIndex] + '_masks' + '.npy'
-                    mask_file_name_png = image_list[sampleIndex] + '_masks' + '.png'
+                    mask_file_name_npy = os.path.basename(image_list[sampleIndex]) + '_masks' + '.npy'
+                    mask_file_name_png = os.path.basename(image_list[sampleIndex]) + '_masks' + '.png'
 
                     np.save(options.test_dir + '/' + param_file_name, detection_pair[c]['detection'][:, 6:9].cpu())
 
