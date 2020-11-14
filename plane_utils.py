@@ -5,7 +5,7 @@ Licensed under the CC BY-NC-SA 4.0 license
 """
 
 import numpy as np
-from .utils import *
+from utils import *
 
 def getCameraFromInfo(info):
     camera = {}

@@ -166,9 +166,6 @@ class Config(object):
     PREDICT_DEPTH = False
 
     NUM_PARAMETER_CHANNELS = 0
-
-    # Use an external feature extractor or use the ones provided in this repo
-    EXTERNAL_EXTRACTOR = False
     
     def __init__(self, options):
         """Set values of computed attributes."""
@@ -374,9 +371,3 @@ class InferenceConfig(PlaneConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
     DETECTION_MIN_CONFIDENCE = 0
-
-
-class EVA5Config(Config):
-    EXTERNAL_EXTRACTOR=True
-    NUM_CLASSES=4
-    GPU_COUNT=1

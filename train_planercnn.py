@@ -14,16 +14,16 @@ import numpy as np
 import cv2
 import sys
 
-from .models.model import *
-from .models.refinement_net import *
-from .models.modules import *
-from .datasets.plane_stereo_dataset import *
+from models.model import *
+from models.refinement_net import *
+from models.modules import *
+from datasets.plane_stereo_dataset import *
 
-from .utils import *
-from .visualize_utils import *
-from .evaluate_utils import *
-from .options import parse_args
-from .config import PlaneConfig
+from utils import *
+from visualize_utils import *
+from evaluate_utils import *
+from options import parse_args
+from config import PlaneConfig
 
     
 def train(options):

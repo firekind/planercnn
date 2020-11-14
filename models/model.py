@@ -19,12 +19,12 @@ import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
 
-from .. import utils
-from ..utils import *
+import utils
+from utils import *
 from torchvision.ops import nms
 from roi_align import CropAndResizeFunction
 import cv2
-from .modules import *
+from models.modules import *
 
 ############################################################
 #  Pytorch Utility Functions
@@ -95,10 +95,6 @@ class FPN(nn.Module):
         self.C3 = C3
         self.C4 = C4
         self.C5 = C5
-        if C1 is None and C2 is None and C3 is None and C4 is None and C5 is None:
-            self.external_extractor = True
-        else:
-            self.external_extractor = False
         self.P6 = nn.MaxPool2d(kernel_size=1, stride=2)
         self.P5_conv1 = nn.Conv2d(2048, self.out_channels, kernel_size=1, stride=1)
         self.P5_conv2 = nn.Sequential(
@@ -121,24 +117,15 @@ class FPN(nn.Module):
             nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, stride=1),
         )
 
-    def forward(self, x, extractor_stages = None):
-        if not self.external_extractor:
-            x = self.C1(x)
-            x = self.C2(x)
-            c2_out = x
-            x = self.C3(x)
-            c3_out = x
-            x = self.C4(x)
-            c4_out = x
-            x = self.C5(x)
-        else:
-            x = extractor_stages[0]
-            c2_out = x
-            x = extractor_stages[1]
-            c3_out = x
-            x = extractor_stages[2]
-            c4_out = x
-            x = extractor_stages[3]
+    def forward(self, x):
+        x = self.C1(x)
+        x = self.C2(x)
+        c2_out = x
+        x = self.C3(x)
+        c3_out = x
+        x = self.C4(x)
+        c4_out = x
+        x = self.C5(x)
         p5_out = self.P5_conv1(x)
         
         if self.bilinear_upsampling:
@@ -233,15 +220,10 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         x = self.C1(x)
-        print(x.shape)
         x = self.C2(x)
-        print(x.shape)
         x = self.C3(x)
-        print(x.shape)
         x = self.C4(x)
-        print(x.shape)
         x = self.C5(x)
-        print(x.shape)
         return x
 
 
@@ -1428,20 +1410,17 @@ class MaskRCNN(nn.Module):
             raise Exception("Image size must be dividable by 2 at least 6 times "
                             "to avoid fractions when downscaling and upscaling."
                             "For example, use 256, 320, 384, 448, 512, ... etc. ")
+        
+        ## Build the shared convolutional layers.
+        ## Bottom-up Layers
+        ## Returns a list of the last layers of each stage, 5 in total.
+        ## Don't create the thead (stage 5), so we pick the 4th item in the list.
+        resnet = ResNet("resnet101", stage5=True, numInputChannels=config.NUM_INPUT_CHANNELS)
+        C1, C2, C3, C4, C5 = resnet.stages()
 
-        if not config.EXTERNAL_EXTRACTOR:
-            ## Build the shared convolutional layers.
-            ## Bottom-up Layers
-            ## Returns a list of the last layers of each stage, 5 in total.
-            ## Don't create the thead (stage 5), so we pick the 4th item in the list.
-            resnet = ResNet("resnet101", stage5=True, numInputChannels=config.NUM_INPUT_CHANNELS)
-            C1, C2, C3, C4, C5 = resnet.stages()
-
-            ## Top-down Layers
-            ## TODO: add assert to varify feature map sizes match what's in config
-            self.fpn = FPN(C1, C2, C3, C4, C5, out_channels=256, bilinear_upsampling=self.config.BILINEAR_UPSAMPLING)
-        else:
-            self.fpn = FPN(None, None, None, None, None, out_channels=256, bilinear_upsampling=self.config.BILINEAR_UPSAMPLING)
+        ## Top-down Layers
+        ## TODO: add assert to varify feature map sizes match what's in config
+        self.fpn = FPN(C1, C2, C3, C4, C5, out_channels=256, bilinear_upsampling=self.config.BILINEAR_UPSAMPLING)
 
         ## Generate Anchors
         self.anchors = Variable(torch.from_numpy(utils.generate_pyramid_anchors(config.RPN_ANCHOR_SCALES,

@@ -9,8 +9,8 @@ import glob
 import cv2
 import os
 
-from ..utils import *
-from .plane_dataset import *
+from utils import *
+from datasets.plane_dataset import *
 
 class InferenceDataset(Dataset):
     """ This class creates a dataloader for custom images """
