@@ -587,9 +587,10 @@ def evaluate(options):
                     continue
             else:
                 for c in range(len(detection_pair)):
-                    param_file_name = str(sampleIndex % 500) + '_plane_parameters_' + str(c) + '.npy'
+                    # param_file_name = str(sampleIndex % 500) + '_plane_parameters_' + str(c) + '.npy'
                     # mask_file_name_npy = str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.npy'
                     # mask_file_name_png = str(sampleIndex % 500) + '_plane_masks_' + str(c) + '.png'
+                    mask_file_name_npy = os.path.basename(image_list[sampleIndex]) + '_parameters' + '.npy'
                     mask_file_name_npy = os.path.basename(image_list[sampleIndex]) + '_masks' + '.npy'
                     mask_file_name_png = os.path.basename(image_list[sampleIndex]) + '_masks' + '.png'
 
