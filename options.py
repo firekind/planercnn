@@ -183,6 +183,13 @@ def parse_args(in_notebook=False, args=None):
     parser.add_argument('--methods', dest='methods',
                         help='evaluation methods',
                         default='b', type=str)
+    ## Visualization options (for eval)
+    parser.add_argument('--maskMode', dest='maskMode',
+                        help='whether to save segmentation mask in .npy files or png files.',
+                        default='npy', choices=['npy', 'png', 'both'], type=str)
+    parser.add_argument('--noVisualize', dest='noVisualize',
+                        help='whether to save depth images, original images, overlaid segmented images, etc.',
+                        action='store_true')
     
     if args is not None:
         args = parser.parse_args(args)

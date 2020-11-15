@@ -33,7 +33,6 @@ class PlaneRCNNTrainer:
             gt_parameters,
             gt_depth,
             extrinsics,
-            gt_plane,
             gt_segmentation,
             camera,
         ) = batch
@@ -45,7 +44,6 @@ class PlaneRCNNTrainer:
                 "bbox": gt_boxes,
                 "extrinsics": extrinsics,
                 "segmentation": gt_segmentation,
-                "plane": gt_plane,
                 "camera": camera,
             }
         )
@@ -177,7 +175,6 @@ class PlaneRCNNTrainer:
                 "extrinsics": extrinsics,
                 "segmentation": gt_segmentation,
                 "parameters": detection_gt_parameters,
-                "plane": gt_plane,
                 "camera": camera,
             }
         )
@@ -288,7 +285,6 @@ class PlaneRCNNTrainer:
 
             masks_gt_large = (segmentation == segments_gt.view((-1, 1, 1))).float()
             masks_gt_small = masks_gt_large[:, ::4, ::4]
-            planes_gt = input_dict["plane"][0][segments_gt]
 
             ## Run the refinement network
             results = self.refine_model(

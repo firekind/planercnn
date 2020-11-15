@@ -808,6 +808,40 @@ def visualizeGraph(var, params):
     from torchviz import make_dot
     return make_dot(var, params)
 
+def masks_to_image(masks):
+    # shape of masks should be (H, W, N)
+    # toRGB = lambda x: (x // 256 // 256 % 256, x // 256 % 256, x % 256)
+    toRGB = lambda x: (x >> 16 & 255, x >> 8 & 255, x & 255)
+    max_val = 16777215
+
+    step = max_val // (masks.shape[2])
+    img = np.full((masks.shape[0], masks.shape[1], 3), fill_value=0, dtype=np.int32)
+    
+    for i in range(1, masks.shape[2] + 1):
+        img[masks[:, :, i - 1] == 1] = toRGB(i * step)
+
+    return img # (H, W, C)
+
+def image_to_mask(img, num_masks):
+    # img shape should be (H, W, C) and type should be int
+    img = img.astype(np.int32)
+
+    max_val = 16777215
+    step = max_val // num_masks
+    return ((img[:, :, 0] * 256 * 256 + img[:, :, 1] * 256 + img[:, :, 2]) // step) - 1
+
+def image_to_masks(img, num_masks):
+    # img shape should be (H, W, C) and type should be int
+    img = img.astype(np.int32)
+
+    m = image_to_mask(img, num_masks)
+    masks = np.full((num_masks, m.shape[0], m.shape[1]), fill_value=0, dtype=np.int32)
+
+    for i in range(num_masks):
+        masks[i, m == i] = 1
+
+    return masks # (N, H, W)
+
 if __name__ == '__main__':
     pose = np.eye(4)
     
