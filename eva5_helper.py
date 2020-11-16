@@ -17,7 +17,7 @@ class PlaneRCNNTrainer:
         self.options = config.options
         self.refine_model = refine_model
 
-    def train_step(self, batch, outputs):
+    def train_step(self, batch, outputs, device="cpu"):
         input_pair = []
         detection_pair = []
         losses = []
@@ -157,13 +157,13 @@ class PlaneRCNNTrainer:
         else:
             XYZ_pred = torch.zeros(
                 (3, self.config.IMAGE_MAX_DIM, self.config.IMAGE_MAX_DIM)
-            ).cuda()
+            ).to(device)
             detection_mask = torch.zeros(
                 (1, self.config.IMAGE_MAX_DIM, self.config.IMAGE_MAX_DIM)
-            ).cuda()
+            ).to(device)
             plane_XYZ = torch.zeros(
                 (1, 3, self.config.IMAGE_MAX_DIM, self.config.IMAGE_MAX_DIM)
-            ).cuda()
+            ).to(device)
             pass
 
         input_pair.append(
@@ -269,7 +269,7 @@ class PlaneRCNNTrainer:
             ## Generate supervision target for the refinement network
             segmentation_one_hot = (
                 segmentation
-                == torch.arange(segmentation.max() + 1).cuda().view((-1, 1, 1, 1))
+                == torch.arange(segmentation.max() + 1).to(device).view((-1, 1, 1, 1))
             ).long()
             intersection = (
                 (torch.round(detection_masks).long() * segmentation_one_hot)
@@ -280,7 +280,7 @@ class PlaneRCNNTrainer:
             mapping = intersection.max(1)[1]
             detection_areas = detection_masks.sum(-1).sum(-1)
             valid_mask = (
-                mapping[segments_gt] == torch.arange(len(segments_gt)).cuda()
+                mapping[segments_gt] == torch.arange(len(segments_gt)).to(device)
             ).float()
 
             masks_gt_large = (segmentation == segments_gt.view((-1, 1, 1))).float()
@@ -297,12 +297,12 @@ class PlaneRCNNTrainer:
                 depth_np,
             )
 
-            plane_depth_loss = torch.zeros(1).cuda()
-            depth_loss = torch.zeros(1).cuda()
-            plane_loss = torch.zeros(1).cuda()
-            mask_loss = torch.zeros(1).cuda()
-            flow_loss = torch.zeros(1).cuda()
-            flow_confidence_loss = torch.zeros(1).cuda()
+            plane_depth_loss = torch.zeros(1).to(device)
+            depth_loss = torch.zeros(1).to(device)
+            plane_loss = torch.zeros(1).to(device)
+            mask_loss = torch.zeros(1).to(device)
+            flow_loss = torch.zeros(1).to(device)
+            flow_confidence_loss = torch.zeros(1).to(device)
             for resultIndex, result in enumerate(results[1:]):
                 if "mask" in result:
                     masks_pred = result["mask"][:, 0]
@@ -336,11 +336,11 @@ class PlaneRCNNTrainer:
                         mask_loss += torch.nn.functional.cross_entropy(
                             masks_logits,
                             segmentation,
-                            weight=torch.cat([torch.ones(1).cuda(), valid_mask], dim=0),
+                            weight=torch.cat([torch.ones(1).to(device), valid_mask], dim=0),
                         )
                     masks_pred = (
                         masks_pred.max(0, keepdim=True)[1]
-                        == torch.arange(len(masks_pred)).cuda().long().view((-1, 1, 1))
+                        == torch.arange(len(masks_pred)).to(device).long().view((-1, 1, 1))
                     ).float()[1:]
                 continue
             losses += [mask_loss + depth_loss + plane_depth_loss + plane_loss]
@@ -353,10 +353,10 @@ class PlaneRCNNTrainer:
             ).squeeze(1)
             all_masks = (
                 all_masks.max(0, keepdim=True)[1]
-                == torch.arange(len(all_masks)).cuda().long().view((-1, 1, 1))
+                == torch.arange(len(all_masks)).to(device).long().view((-1, 1, 1))
             ).float()
             masks = all_masks[1:]
-            detection_masks = torch.zeros(detection_dict["masks"].shape).cuda()
+            detection_masks = torch.zeros(detection_dict["masks"].shape).to(device)
             detection_masks[:, 80:560] = masks
             detection_dict["masks"] = detection_masks
             results[-1]["mask"] = masks_small
@@ -375,7 +375,7 @@ class PlaneRCNNTrainer:
                 )
                 detection_dict["XYZ"] = XYZ_pred
         else:
-            losses += [torch.zeros(1).cuda()]
+            losses += [torch.zeros(1).to(device)]
 
         ## The warping loss
         for c in range(1, 2):
@@ -403,7 +403,7 @@ class PlaneRCNNTrainer:
             )
 
             XYZ = warped_info[:3].view((3, -1))
-            XYZ = torch.cat([XYZ, torch.ones((1, int(XYZ.shape[1]))).cuda()], dim=0)
+            XYZ = torch.cat([XYZ, torch.ones((1, int(XYZ.shape[1]))).to(device)], dim=0)
             transformed_XYZ = torch.matmul(
                 input_pair[c]["extrinsics"][0],
                 torch.matmul(input_pair[1 - c]["extrinsics"][0].inverse(), XYZ),
