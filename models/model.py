@@ -1700,6 +1700,20 @@ class MaskRCNN(nn.Module):
             })
         return results
 
+    def predict_on_batch(self, extractor_outputs, inputs, mode, use_nms=1, use_refinement=False, return_feature_map=False):
+        outputs = []
+        
+        for i, inp in enumerate(inputs):
+            outputs.append(self.predict(
+                [[o[i].unsqueeze(0) for o in extractor_outputs], *inp],
+                mode,
+                use_nms,
+                use_refinement,
+                return_feature_map
+            ))
+
+        return outputs
+
     def predict(self, input, mode, use_nms=1, use_refinement=False, return_feature_map=False):
         x = input[0] # either the molded images or the stages of the feature extractor
         image_metas = input[1]

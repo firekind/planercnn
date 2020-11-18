@@ -17,6 +17,13 @@ class PlaneRCNNTrainer:
         self.options = config.options
         self.refine_model = refine_model
 
+    def train_step_on_batch(self, batches, outputs, device="cpu"):
+        losses = []
+        for i in range(len(batches)):
+            losses.append(self.train_step(batches[i], outputs[i], device=device))
+
+        return losses
+
     def train_step(self, batch, outputs, device="cpu"):
         input_pair = []
         detection_pair = []
