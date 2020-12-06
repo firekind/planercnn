@@ -55,7 +55,6 @@ class PlaneRCNNTrainer:
             }
         )
 
-        # rpn_class_logits, rpn_pred_bbox, target_class_ids, mrcnn_class_logits, target_deltas, mrcnn_bbox, target_mask, mrcnn_mask, target_parameters, mrcnn_parameters, detections, detection_masks, detection_gt_parameters, detection_gt_masks, rpn_rois, roi_features, roi_indices, feature_map, depth_np_pred = outputs
         (
             rpn_class_logits,
             rpn_pred_bbox,
@@ -453,3 +452,114 @@ class PlaneRCNNTrainer:
 
         return loss
 
+    @staticmethod
+    def get_input_pair(batch):
+        (
+            images,
+            _, # image_metas,
+            _, # rpn_match,
+            _, # rpn_bbox,
+            _, # gt_class_ids,
+            gt_boxes,
+            gt_masks,
+            _, # gt_parameters,
+            gt_depth,
+            extrinsics,
+            gt_segmentation,
+            camera,
+        ) = batch
+        return [
+            {
+                "image": images,
+                "depth": gt_depth,
+                "mask": gt_masks,
+                "bbox": gt_boxes,
+                "extrinsics": extrinsics,
+                "segmentation": gt_segmentation,
+                "camera": camera,
+            }
+        ]
+
+    def get_input_pair_for_batch(self, batch):
+        input_pair = []
+        for data in batch:
+            input_pair.append(self.get_input_pair(data)[0])
+
+        return input_pair
+
+    def get_detection_pair_for_batch(self, batch, output, device="cuda"):
+        detection_pair = []
+        for i in range(len(batch)):
+            detection_pair.append(self.get_detection_pair(batch[i], output[i], device)[0])
+
+        return detection_pair
+
+    def get_detection_pair(self, batch, output, device="cuda"):
+        (
+            _, # rpn_class_logits,
+            _, # rpn_pred_bbox,
+            _, # target_class_ids,
+            _, # mrcnn_class_logits,
+            _, # target_deltas,
+            _, # mrcnn_bbox,
+            _, # target_mask,
+            _, # mrcnn_mask,
+            _, # target_parameters,
+            _, # mrcnn_parameters,
+            detections,
+            detection_masks,
+            _, # detection_gt_parameters,
+            _, # detection_gt_masks,
+            _, # rpn_rois,
+            _, # roi_features,
+            _, # roi_indices,
+            depth_np_pred,
+        ) = output
+
+        if len(detections) > 0:
+            detections, detection_masks = unmoldDetections(
+                self.config,
+                batch[-1], # camera
+                detections,
+                detection_masks,
+                depth_np_pred,
+                None, # normal_np_pred,
+                debug=False,
+            )
+            if "refine_only" in self.options.suffix:
+                detections, detection_masks = (
+                    detections.detach(),
+                    detection_masks.detach(),
+                )
+                pass
+            XYZ_pred, detection_mask, plane_XYZ = calcXYZModule(
+                self.config,
+                batch[-1], # camera
+                detections,
+                detection_masks,
+                depth_np_pred,
+                return_individual=True,
+            )
+            detection_mask = detection_mask.unsqueeze(0)
+        else:
+            XYZ_pred = torch.zeros(
+                (3, self.config.IMAGE_MAX_DIM, self.config.IMAGE_MAX_DIM)
+            ).to(device)
+            detection_mask = torch.zeros(
+                (1, self.config.IMAGE_MAX_DIM, self.config.IMAGE_MAX_DIM)
+            ).to(device)
+            plane_XYZ = torch.zeros(
+                (1, 3, self.config.IMAGE_MAX_DIM, self.config.IMAGE_MAX_DIM)
+            ).to(device)
+
+        return [
+            {
+                "XYZ": XYZ_pred,
+                "depth": XYZ_pred[1:2],
+                "mask": detection_mask,
+                "detection": detections,
+                "masks": detection_masks,
+                "plane_XYZ": plane_XYZ,
+                "depth_np": depth_np_pred,
+            }
+        ]
